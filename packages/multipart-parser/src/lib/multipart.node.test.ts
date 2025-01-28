@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { getRandomBytes } from '../../test/utils.ts';
 import { createMultipartMockRequest } from '../../test/utils.node.ts';
 
-import { type MultipartPart } from './multipart.ts';
+import { parseMultipart, type MultipartPart } from './multipart.ts';
 import { parseMultipartRequest } from './multipart.node.ts';
 
 describe('parseMultipartRequest (node)', () => {
@@ -61,5 +61,51 @@ describe('parseMultipartRequest (node)', () => {
     assert.equal(parts[0].filename, 'tesla.jpg');
     assert.equal(parts[0].mediaType, 'image/jpeg');
     assert.deepEqual(parts[0].content, content);
+  });
+
+  it('parses this example', async () => {
+    //     var data = `--f4ca952c-0249-48ca-9626-cb0da7cc8953
+    // Content-Disposition: form-data; name="changelog"
+
+    // - ChangeFontSizeController: Corregido titulo de acción
+
+    // --f4ca952c-0249-48ca-9626-cb0da7cc8953
+    // Content-Disposition: form-data; name="product_name"
+
+    // Nexion Smart ERP
+    // --f4ca952c-0249-48ca-9626-cb0da7cc8953
+    // Content-Disposition: form-data; name="version"
+
+    // 24.4.0.3
+    // --f4ca952c-0249-48ca-9626-cb0da7cc8953
+    // Content-Disposition: form-data;name="upload_files";filename="NexionSmartERP-AnyCPU-24.4.0.3.exe"
+    // Content-Type: application/octet-stream
+
+    // TEST
+    // --f4ca952c-0249-48ca-9626-cb0da7cc8953--`;
+
+    // taken from packages/form-data-parser/src/lib/form-data.test.ts
+    // "parses a multipart/form-data request"
+    var data = [
+      '------WebKitFormBoundary7MA4YWxkTrZu0gW',
+      'Content-Disposition: form-data; name="text"',
+      '',
+      'Hello, World!',
+      '------WebKitFormBoundary7MA4YWxkTrZu0gW',
+      'Content-Disposition: form-data; name="file"; filename="example.txt"',
+      'Content-Type: text/plain',
+      '',
+      'This is an example file.',
+      '------WebKitFormBoundary7MA4YWxkTrZu0gW--',
+    ].join('\r\n');
+
+    let boundary = '------WebKitFormBoundary7MA4YWxkTrZu0gW';
+    var parts = [];
+    var message = new TextEncoder().encode(data);
+    await parseMultipart(message, { boundary }, async (part) => {
+      parts.push(part);
+    });
+
+    assert.equal(parts.length, 4);
   });
 });
